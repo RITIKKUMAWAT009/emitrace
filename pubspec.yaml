@@ -1,0 +1,33 @@
+name: emitrace
+description: >
+  One tap bug reports for Flutter QA teams.
+  Never reproduce a QA bug manually again.
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: ^3.13.0-84.0.dev
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+
+  dio: ^5.4.0
+  device_info_plus: ^10.0.0
+  package_info_plus: ^8.0.0
+  share_plus: ^10.0.0
+  path_provider: ^2.1.0
+  http: ^1.2.0
+  image_gallery_saver: ^2.0.3
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+
+flutter:
