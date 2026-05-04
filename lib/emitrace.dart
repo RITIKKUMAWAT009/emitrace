@@ -1,31 +1,4 @@
-
-/// Emitrace — Never reproduce a QA bug manually again
-///
-/// Quick start:
-/// ```dart
-/// void main() {
-///   final navigatorKey = GlobalKey<NavigatorState>();
-///
-///   runApp(
-///     EmitraceScope(
-///       config: EmitraceConfig(
-///         appName: 'My App',
-///         navigatorKey: navigatorKey,
-///         enableAutoScreenshotOnError: true,
-///         enableReportGenerator: true,
-///         enableSlackIntegration: true,
-///         slackWebHookUrl: 'https://hooks.slack.com/services/xxx/yyy/zzz',
-///       ),
-///       child: MaterialApp(
-///         navigatorKey: navigatorKey,
-///         home: const MyHomePage(),
-///       ),
-///     ),
-///   );
-/// }
-/// ```
-
-library emitrace;
+// Emitrace — Never reproduce a QA bug manually again.
 
 // Core
 export 'src/core/emitrace_config.dart';

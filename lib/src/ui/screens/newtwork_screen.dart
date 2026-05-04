@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/emitrace_controller.dart';
-import '../../models/breadcrumb.dart';
-import '../widgets/breadcrumb_tile.dart';
 
 class NetworkScreen extends StatelessWidget {
   const NetworkScreen({super.key});
@@ -23,7 +21,7 @@ class NetworkScreen extends StatelessWidget {
             Text(
               'No network calls yet',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 fontSize: 14,
               ),
             ),
@@ -31,7 +29,7 @@ class NetworkScreen extends StatelessWidget {
             Text(
               'Add EmitraceDioInterceptor to your Dio instance',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 fontSize: 11,
               ),
               textAlign: TextAlign.center,
@@ -79,7 +77,7 @@ class NetworkScreen extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF6C63FF)
-                          .withOpacity(0.2),
+                          .withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(

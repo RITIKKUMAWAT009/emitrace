@@ -54,7 +54,7 @@ class BreadcrumbTile extends StatelessWidget {
                 Text(
                   _formatTime(breadcrumb.timestamp),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     fontSize: 10,
                   ),
                 ),
@@ -69,7 +69,7 @@ class BreadcrumbTile extends StatelessWidget {
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: _typeColor.withOpacity(0.15),
+              color: _typeColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(

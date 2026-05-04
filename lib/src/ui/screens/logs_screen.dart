@@ -287,7 +287,7 @@ class _LogsScreenState extends State<LogsScreen> {
                       Text(
                         'No events yet',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           fontSize: 14,
                         ),
                       ),
@@ -295,7 +295,7 @@ class _LogsScreenState extends State<LogsScreen> {
                       Text(
                         'Interact with your app to see events',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           fontSize: 12,
                         ),
                       ),
