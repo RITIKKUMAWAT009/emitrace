@@ -31,9 +31,7 @@ class _LogsScreenState extends State<LogsScreen> {
   List get _filteredBreadcrumbs {
     final all = _controller.breadCrumbs.reversed.toList();
     if (_selectedFilter == 'all') return all;
-    return all
-        .where((b) => b.type == _selectedFilter)
-        .toList();
+    return all.where((b) => b.type == _selectedFilter).toList();
   }
 
   String _prettyJson(dynamic value) {
@@ -138,7 +136,8 @@ class _LogsScreenState extends State<LogsScreen> {
                                             padding: EdgeInsets.all(16),
                                             child: Text(
                                               'Screenshot file not found',
-                                              style: TextStyle(color: Colors.white),
+                                              style: TextStyle(
+                                                  color: Colors.white),
                                             ),
                                           ),
                                   );
@@ -148,23 +147,26 @@ class _LogsScreenState extends State<LogsScreen> {
                             child: const Text('View Screenshot'),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final result = await _controller
-                                  .saveScreenshotToGallery(screenshotPath);
-                              if (!mounted) return;
-                              final ok = result['ok'] == true;
-                              final msg = result['message']?.toString() ??
-                                  (ok ? 'Saved' : 'Failed');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(msg)),
-                              );
-                            },
-                            child: const Text('Save Screenshot'),
-                          ),
-                        ),
+                        // const SizedBox(width: 8),
+                        // Expanded(
+                        //   child: ElevatedButton(
+                        //     onPressed: () async {
+                        //       final result = await _controller
+                        //           .saveScreenshotToGallery(screenshotPath);
+                        //       if (!mounted) return;
+                        //       final ok = result['ok'] == true;
+                        //       final msg = result['message']?.toString() ??
+                        //           (ok ? 'Saved' : 'Failed');
+                        //       _showFloatingMessage(
+                        //         msg,
+                        //         background: ok
+                        //             ? const Color(0xFF00D4AA)
+                        //             : const Color(0xFFFF5555),
+                        //       );
+                        //     },
+                        //     child: const Text('Save Screenshot'),
+                        //   ),
+                        // ),
                       ],
                     ),
                 ],
@@ -192,8 +194,7 @@ class _LogsScreenState extends State<LogsScreen> {
             itemCount: _filters.length,
             itemBuilder: (context, index) {
               final filter = _filters[index];
-              final isSelected =
-                  _selectedFilter == filter['value'];
+              final isSelected = _selectedFilter == filter['value'];
 
               return GestureDetector(
                 onTap: () {
@@ -213,21 +214,17 @@ class _LogsScreenState extends State<LogsScreen> {
                         : const Color(0xFF1A1A2E),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF6C63FF)
-                          : Colors.white12,
+                      color:
+                          isSelected ? const Color(0xFF6C63FF) : Colors.white12,
                     ),
                   ),
                   child: Text(
                     filter['label']!,
                     style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white54,
+                      color: isSelected ? Colors.white : Colors.white54,
                       fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -305,7 +302,8 @@ class _LogsScreenState extends State<LogsScreen> {
               : ListView.builder(
                   itemCount: _filteredBreadcrumbs.length,
                   itemBuilder: (context, index) {
-                    final breadcrumb = _filteredBreadcrumbs[index] as Breadcrumb;
+                    final breadcrumb =
+                        _filteredBreadcrumbs[index] as Breadcrumb;
                     return GestureDetector(
                       onTap: () => _openDetails(breadcrumb),
                       child: BreadcrumbTile(

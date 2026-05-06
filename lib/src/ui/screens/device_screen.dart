@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:emitrace/src/core/emitrace_controller.dart';
 import 'package:share_plus/share_plus.dart';
@@ -69,6 +68,113 @@ class _DeviceScreenState extends State<DeviceScreen> {
     });
   }
 
+  Future<void> _openLatestReportViewer() async {
+    final path = _controller.latestReportPath ??
+        await _controller.generateReport();
+    if (!mounted) return;
+    if (path == null) {
+      _showMessage(
+        'Report generation is disabled',
+        background: const Color(0xFFFF5555),
+      );
+      return;
+    }
+    final content = await _controller.loadLatestReportContent();
+    if (!mounted) return;
+    if (content == null || content.isEmpty) {
+      _showMessage(
+        'Could not load report file',
+        background: const Color(0xFFFF5555),
+      );
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0A0A0F),
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * 0.85,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Latest Report',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Copy Report',
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: content));
+                        if (!mounted) return;
+                        _showMessage(
+                          'Report content copied',
+                          background: const Color(0xFF00D4AA),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.copy_rounded,
+                        color: Colors.white70,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  path,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF11111B),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        content,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInfo();
+  }
+
   Rect _sharePositionOrigin() {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) {
@@ -78,16 +184,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
     return origin & box.size;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadInfo();
-  }
-
   Future<void> _loadInfo() async {
-    final deviceInfoPlugin = DeviceInfoPlugin();
     final packageInfo = await PackageInfo.fromPlatform();
-
     Map<String, String> info = {
       'App Name': packageInfo.appName,
       'Version': packageInfo.version,
@@ -97,22 +195,28 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
     try {
       if (Platform.isAndroid) {
-        final androidInfo =
-            await deviceInfoPlugin.androidInfo;
         info.addAll({
-          'Device': androidInfo.model,
-          'Brand': androidInfo.brand,
-          'Android Version': androidInfo.version.release,
-          'SDK': androidInfo.version.sdkInt.toString(),
-          'Manufacturer': androidInfo.manufacturer,
+          'Platform': 'Android',
+          'OS Version': Platform.operatingSystemVersion,
+          'Processors': Platform.numberOfProcessors.toString(),
+          'Locale': Platform.localeName,
+          'Hostname': Platform.localHostname,
         });
       } else if (Platform.isIOS) {
-        final iosInfo = await deviceInfoPlugin.iosInfo;
         info.addAll({
-          'Device': iosInfo.model,
-          'iOS Version': iosInfo.systemVersion,
-          'Device Name': iosInfo.name,
-          'Identifier': iosInfo.identifierForVendor ?? 'N/A',
+          'Platform': 'iOS',
+          'OS Version': Platform.operatingSystemVersion,
+          'Processors': Platform.numberOfProcessors.toString(),
+          'Locale': Platform.localeName,
+          'Hostname': Platform.localHostname,
+        });
+      } else {
+        info.addAll({
+          'Platform': Platform.operatingSystem,
+          'OS Version': Platform.operatingSystemVersion,
+          'Processors': Platform.numberOfProcessors.toString(),
+          'Locale': Platform.localeName,
+          'Hostname': Platform.localHostname,
         });
       }
     } catch (e) {
@@ -212,6 +316,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
               reportPath == null
                   ? 'Report generation is disabled'
                   : 'Report exported successfully',
+              background: reportPath == null
+                  ? const Color(0xFFFF5555)
+                  : const Color(0xFF00D4AA),
             );
          },
           child: Container(
@@ -229,6 +336,29 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 'Generate Report',
                 style: TextStyle(
                   color: Color(0xFF00D4AA),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: _openLatestReportViewer,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A2740),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: const Center(
+              child: Text(
+                'View Latest Report',
+                style: TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),

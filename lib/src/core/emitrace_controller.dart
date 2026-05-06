@@ -1,13 +1,14 @@
 import 'package:emitrace/src/models/breadcrumb.dart';
 import 'package:emitrace/src/core/emitrace_config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 class EmitraceController {
   static final EmitraceController _instance = EmitraceController._internal();
@@ -21,6 +22,8 @@ class EmitraceController {
   String? _latestReportPath;
 
   final List<Breadcrumb> _breadCrumbs = [];
+  static const MethodChannel _galleryChannel =
+      MethodChannel('emitrace/gallery');
 
   List<Breadcrumb> get breadCrumbs => List.unmodifiable(_breadCrumbs);
   String? get latestReportPath => _latestReportPath;
@@ -94,6 +97,7 @@ class EmitraceController {
       },
     ));
   }
+
   Future<String?> captureScreenshot({
     String reason = 'manual',
   }) async {
@@ -108,32 +112,45 @@ class EmitraceController {
       return null;
     }
 
-    final context = boundaryKey.currentContext;
-    if (context == null) return null;
-    final renderObject = context.findRenderObject();
-    if (renderObject is! RenderRepaintBoundary) return null;
+    try {
+      await SchedulerBinding.instance.endOfFrame;
+      final context = boundaryKey.currentContext;
+      if (context == null) return null;
+      if (!context.mounted) return null;
+      final renderObject = context.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) return null;
 
-    final ui.Image image = await renderObject.toImage(
-      pixelRatio: config.screenshotPixelRatio.toDouble(),
-    );
-    final byteData = await image.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-    if (byteData == null) return null;
+      final ui.Image image = await renderObject.toImage(
+        pixelRatio: config.screenshotPixelRatio.toDouble(),
+      );
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (byteData == null) return null;
 
-    final bytes = byteData.buffer.asUint8List();
-    final dir = await getTemporaryDirectory();
-    final path =
-        '${dir.path}/emitrace_${reason}_${now.millisecondsSinceEpoch}.png';
-    final file = File(path);
-    await file.writeAsBytes(bytes, flush: true);
-    if (config.autoSaveScreenshotToGallery) {
-      try {
-        await ImageGallerySaver.saveFile(path);
-      } catch (_) {}
+      final bytes = byteData.buffer.asUint8List();
+      final dir = await getApplicationDocumentsDirectory();
+      final screenshotsDir = Directory('${dir.path}/emitrace_screenshots');
+      if (!screenshotsDir.existsSync()) {
+        screenshotsDir.createSync(recursive: true);
+      }
+      final path =
+          '${screenshotsDir.path}/emitrace_${reason}_${now.millisecondsSinceEpoch}.png';
+      final file = File(path);
+      await file.writeAsBytes(bytes, flush: true);
+      if (config.autoSaveScreenshotToGallery) {
+        try {
+          await _galleryChannel.invokeMethod<bool>(
+            'saveToGallery',
+            {'path': path},
+          );
+        } catch (_) {}
+      }
+      _lastScreenshotAt = now;
+      return path;
+    } catch (_) {
+      return null;
     }
-    _lastScreenshotAt = now;
-    return path;
   }
 
   Future<void> captureErrorAndScreenshot({
@@ -147,8 +164,8 @@ class EmitraceController {
     if (config != null && config.enableAutoScreenshotOnError) {
       screenshotPath = await captureScreenshot(reason: 'error');
     }
-    final screenshotExists = screenshotPath != null &&
-        File(screenshotPath).existsSync();
+    final screenshotExists =
+        screenshotPath != null && File(screenshotPath).existsSync();
 
     addBreadCrumb(
       Breadcrumb(
@@ -176,9 +193,13 @@ class EmitraceController {
     }
 
     final now = DateTime.now();
-    final dir = await getTemporaryDirectory();
+    final dir = await getApplicationDocumentsDirectory();
+    final reportsDir = Directory('${dir.path}/emitrace_reports');
+    if (!reportsDir.existsSync()) {
+      reportsDir.createSync(recursive: true);
+    }
     final reportPath =
-        '${dir.path}/emitrace_report_${now.millisecondsSinceEpoch}.md';
+        '${reportsDir.path}/emitrace_report_${now.millisecondsSinceEpoch}.md';
 
     final summary = <String, int>{};
     for (final b in _breadCrumbs) {
@@ -205,8 +226,7 @@ class EmitraceController {
 
     for (int i = 0; i < _breadCrumbs.length; i++) {
       final b = _breadCrumbs[i];
-      final screenshotPath =
-          b.data['screenshotPath']?.toString();
+      final screenshotPath = b.data['screenshotPath']?.toString();
       buffer.writeln(
         '### ${i + 1}. ${b.type.toUpperCase()}',
       );
@@ -242,6 +262,14 @@ class EmitraceController {
     return reportPath;
   }
 
+  Future<String?> loadLatestReportContent() async {
+    final path = _latestReportPath;
+    if (path == null || path.isEmpty) return null;
+    final file = File(path);
+    if (!file.existsSync()) return null;
+    return file.readAsString();
+  }
+
   Future<bool> sendLatestReportToSlack() async {
     final config = _config;
     if (config == null || !config.enableSlackIntegration) {
@@ -257,26 +285,25 @@ class EmitraceController {
     for (final b in _breadCrumbs) {
       summary[b.type] = (summary[b.type] ?? 0) + 1;
     }
-    final summaryText = summary.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(' | ');
+    final summaryText =
+        summary.entries.map((e) => '${e.key}:${e.value}').join(' | ');
 
-    final response = await http.post(
+    final payload = jsonEncode({
+      'text': 'Emitrace Report\n'
+          'App: ${config.appName}\n'
+          'Events: ${_breadCrumbs.length}\n'
+          'Summary: $summaryText\n'
+          'Local report path: $reportPath\n'
+          'Recent errors:\n'
+          '${_latestErrorSummary()}',
+    });
+
+    final response = await _postJsonWithRedirects(
       Uri.parse(webhook),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'text': 'Emitrace Report\n'
-            'App: ${config.appName}\n'
-            'Events: ${_breadCrumbs.length}\n'
-            'Summary: $summaryText\n'
-            'Local report path: $reportPath\n'
-            'Recent errors:\n'
-            '${_latestErrorSummary()}',
-      }),
+      payload,
     );
 
-    final ok = response.statusCode >= 200 &&
-        response.statusCode < 300;
+    final ok = response.statusCode >= 200 && response.statusCode < 300;
     addBreadCrumb(
       Breadcrumb(
         type: 'slack',
@@ -285,6 +312,7 @@ class EmitraceController {
         data: {
           'statusCode': response.statusCode,
           'responseBody': response.body,
+          'location': response.location,
           'reportFileName': _fileName(reportPath),
           'reportPath': reportPath,
         },
@@ -302,25 +330,34 @@ class EmitraceController {
       };
     }
     try {
-      final result = await ImageGallerySaver.saveFile(path);
-      if (result is Map) {
-        final ok = result['isSuccess'] == true || result['success'] == true;
+      final result = await _galleryChannel.invokeMethod<bool>(
+        'saveToGallery',
+        {'path': path},
+      );
+      final ok = result == true;
+      if (ok) {
         return {
-          'ok': ok,
-          'message': ok
-              ? 'Screenshot saved to gallery'
-              : 'Failed to save screenshot to gallery',
-          'raw': result,
+          'ok': true,
+          'message': 'Screenshot saved to gallery',
+          'raw': {'nativeResult': true},
         };
       }
       return {
-        'ok': true,
-        'message': 'Save request sent to gallery',
+        'ok': false,
+        'message':
+            'Failed to save screenshot to gallery. ${_galleryPermissionHint()}',
+        'raw': {'nativeResult': result},
+      };
+    } on MissingPluginException {
+      return {
+        'ok': false,
+        'message':
+            'Native gallery saver is not implemented in host app. ${_galleryPermissionHint()}',
       };
     } catch (e) {
       return {
         'ok': false,
-        'message': 'Save failed: $e',
+        'message': 'Save failed: $e. ${_galleryPermissionHint()}',
       };
     }
   }
@@ -358,17 +395,13 @@ class EmitraceController {
   void clear() => _breadCrumbs.clear();
 
   String _latestErrorSummary() {
-    final latestErrors = _breadCrumbs
-        .where((b) => b.type == 'error')
-        .toList()
-        .reversed
-        .take(3);
+    final latestErrors =
+        _breadCrumbs.where((b) => b.type == 'error').toList().reversed.take(3);
     if (latestErrors.isEmpty) return 'No recent errors';
     return latestErrors.map((e) {
       final path = e.data['screenshotPath']?.toString();
-      final screenshotInfo = path != null && path.isNotEmpty
-          ? ' screenshot=$path'
-          : '';
+      final screenshotInfo =
+          path != null && path.isNotEmpty ? ' screenshot=$path' : '';
       return '- ${e.message}$screenshotInfo';
     }).join('\n');
   }
@@ -377,4 +410,64 @@ class EmitraceController {
     return path.split(Platform.pathSeparator).last;
   }
 
+  String _galleryPermissionHint() {
+    if (Platform.isIOS) {
+      return 'Add NSPhotoLibraryUsageDescription and NSPhotoLibraryAddUsageDescription in Info.plist.';
+    }
+    if (Platform.isAndroid) {
+      return 'Ensure gallery/media permissions are declared in AndroidManifest and granted on device.';
+    }
+    return 'Check platform storage/photo permissions.';
+  }
+
+  Future<_HttpPostResult> _postJsonWithRedirects(
+    Uri uri,
+    String payload, {
+    int maxRedirects = 5,
+  }) async {
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: payload,
+    );
+
+    final status = response.statusCode;
+    final isRedirect =
+        status == 301 || status == 302 || status == 307 || status == 308;
+    if (!isRedirect || maxRedirects <= 0) {
+      return _HttpPostResult(
+        statusCode: response.statusCode,
+        body: response.body,
+        location: response.headers['location'],
+      );
+    }
+
+    final locationHeader = response.headers['location'];
+    if (locationHeader == null || locationHeader.isEmpty) {
+      return _HttpPostResult(
+        statusCode: response.statusCode,
+        body: response.body,
+        location: null,
+      );
+    }
+
+    final nextUri = uri.resolve(locationHeader);
+    return _postJsonWithRedirects(
+      nextUri,
+      payload,
+      maxRedirects: maxRedirects - 1,
+    );
+  }
+}
+
+class _HttpPostResult {
+  final int statusCode;
+  final String body;
+  final String? location;
+
+  const _HttpPostResult({
+    required this.statusCode,
+    required this.body,
+    required this.location,
+  });
 }
