@@ -1,3 +1,19 @@
+## 1.0.1
+
+Improves report/screenshot reliability and clarifies host-app integration for gallery save.
+
+### Changed
+- Persist screenshots and generated reports in application documents directories instead of temporary storage.
+- Add redirect-aware Slack webhook posting for better compatibility with webhook endpoints that return HTTP redirects.
+- Add in-app "View Latest Report" flow with report content preview and quick copy action.
+- Expand device diagnostics shown in the panel (processors, locale, hostname).
+- Replace direct gallery package flow with native host-app `MethodChannel('emitrace/gallery')` contract guidance.
+- Add Dependabot configuration for weekly dependency update PRs.
+
+### Fixed
+- Harden screenshot capture timing by waiting for end-of-frame and validating mounted render context before capture.
+- Improve user-facing error/success feedback for report generation and sharing actions.
+
 ## 1.0.0
 
 Initial stable release of emitrace.
