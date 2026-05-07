@@ -5,9 +5,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+/// Wraps your app with Emitrace instrumentation and floating launcher UI.
 class EmitraceScope extends StatefulWidget {
+  /// Root app widget that should be monitored by Emitrace.
   final Widget child;
+
+  /// Runtime options controlling overlay visibility and capture features.
   final EmitraceConfig config;
+
+  /// Creates a widget that installs Emitrace around [child].
   const EmitraceScope({super.key, required this.child, required this.config});
 
   @override

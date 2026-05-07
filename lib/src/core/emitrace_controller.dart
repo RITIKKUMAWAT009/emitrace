@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 
+/// Central singleton that stores events and powers reports/screenshots.
 class EmitraceController {
   static final EmitraceController _instance = EmitraceController._internal();
   EmitraceController._internal();
@@ -25,7 +26,10 @@ class EmitraceController {
   static const MethodChannel _galleryChannel =
       MethodChannel('emitrace/gallery');
 
+  /// Read-only list of recorded breadcrumbs.
   List<Breadcrumb> get breadCrumbs => List.unmodifiable(_breadCrumbs);
+
+  /// Absolute path of the most recently generated report, if available.
   String? get latestReportPath => _latestReportPath;
 
   void configure({
