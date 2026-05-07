@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:emitrace/src/core/emitrace_controller.dart';
 
+/// Dio interceptor that records request/response/error breadcrumbs.
 class EmitraceDioInterceptor extends Interceptor {
   final EmitraceController _controller = EmitraceController();
 

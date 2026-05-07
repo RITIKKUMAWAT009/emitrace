@@ -1,3 +1,14 @@
+## 1.0.2
+
+Improves pub.dev package quality and release readiness.
+
+### Added
+- Added dartdoc comments for core public API symbols (`emitrace` library, `EmitraceConfig`, `EmitraceScope`, `EmitraceController`, and `EmitraceDioInterceptor`).
+- Added runnable Flutter example app under `example/` showing `EmitraceScope` and `EmitraceDioInterceptor` integration.
+
+### Changed
+- Updated dependency constraints to support latest stable majors for `package_info_plus` and `share_plus`.
+
 ## 1.0.1
 
 Improves report/screenshot reliability and clarifies host-app integration for gallery save.

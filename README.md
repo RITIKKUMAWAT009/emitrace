@@ -22,7 +22,7 @@ Capture logs, network calls, runtime errors, screenshots, and export clean repor
 ## Installation
 ```yaml
 dependencies:
-  emitrace: ^1.0.1
+  emitrace: ^1.0.2
 ```
 
 ## Quick Start

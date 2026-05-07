@@ -1,4 +1,6 @@
-// Emitrace — Never reproduce a QA bug manually again.
+// Emitrace package entry point.
+// Import this library to enable the in-app debug overlay, capture logs and
+// network events, and generate shareable QA reports.
 
 // Core
 export 'src/core/emitrace_config.dart';
