@@ -1,3 +1,10 @@
+## 1.1.1
+
+### Fixed
+- Tightened dependency lower bounds to improve compatibility with pub.dev downgrade/static checks on current stable Dart/Flutter.
+- Updated share API usage to avoid deprecated `share_plus` calls and improve pub points for static analysis.
+- Improved release readiness and publish validation reliability for this patch release.
+
 ## 1.1.0
 
 Focused DX and report-quality upgrade without breaking existing APIs.
