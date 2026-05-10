@@ -2,7 +2,7 @@ name: emitrace
 description: >
   One-tap Flutter debugging toolkit that captures logs, route transitions,
   Dio network activity, errors, screenshots, and shareable bug reports.
-version: 1.1.0
+version: 1.1.1
 homepage: https://github.com/RITIKKUMAWAT009/emitrace
 repository: https://github.com/RITIKKUMAWAT009/emitrace
 issue_tracker: https://github.com/RITIKKUMAWAT009/emitrace/issues
@@ -21,10 +21,11 @@ dependencies:
   flutter:
     sdk: flutter
   dio: ^5.4.0
-  package_info_plus: ">=8.0.0 <11.0.0"
-  share_plus: ">=10.0.0 <14.0.0"
-  path_provider: ^2.1.0
+  package_info_plus: ">=10.1.0 <11.0.0"
+  share_plus: ">=12.0.0 <14.0.0"
+  path_provider: ">=2.1.5 <3.0.0"
   http: ^1.2.0
+  platform: ">=3.1.6 <4.0.0"
 
 dev_dependencies:
   flutter_test:
