@@ -69,8 +69,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Future<void> _openLatestReportViewer() async {
-    final path = _controller.latestReportPath ??
-        await _controller.generateReport();
+    final path =
+        _controller.latestReportPath ?? await _controller.generateReport();
     if (!mounted) return;
     if (path == null) {
       _showMessage(
@@ -247,12 +247,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
         // App info section
         _SectionHeader(title: '📦 App Info'),
         ..._deviceInfo.entries
-            .where((e) => [
-                  'App Name',
-                  'Version',
-                  'Build Number',
-                  'Package'
-                ].contains(e.key))
+            .where((e) => ['App Name', 'Version', 'Build Number', 'Package']
+                .contains(e.key))
             .map((e) => _InfoRow(
                   label: e.key,
                   value: e.value,
@@ -263,12 +259,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
         // Device info section
         _SectionHeader(title: '📱 Device Info'),
         ..._deviceInfo.entries
-            .where((e) => ![
-                  'App Name',
-                  'Version',
-                  'Build Number',
-                  'Package'
-                ].contains(e.key))
+            .where((e) => !['App Name', 'Version', 'Build Number', 'Package']
+                .contains(e.key))
             .map((e) => _InfoRow(
                   label: e.key,
                   value: e.value,
@@ -320,7 +312,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   ? const Color(0xFFFF5555)
                   : const Color(0xFF00D4AA),
             );
-         },
+          },
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -336,6 +328,37 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 'Generate Report',
                 style: TextStyle(
                   color: Color(0xFF00D4AA),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () {
+            _controller.clear();
+            _showMessage(
+              'Logs and action history cleared',
+              background: const Color(0xFFFF9F43),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9F43).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFFFF9F43).withValues(alpha: 0.4),
+              ),
+            ),
+            child: const Center(
+              child: Text(
+                'Clear Logs & History',
+                style: TextStyle(
+                  color: Color(0xFFFFC56E),
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -380,10 +403,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
               return;
             }
             try {
-              await Share.shareXFiles(
-                [XFile(path)],
-                text: 'Emitrace report file',
-                sharePositionOrigin: _sharePositionOrigin(),
+              await SharePlus.instance.share(
+                ShareParams(
+                  files: [XFile(path)],
+                  text: 'Emitrace report file',
+                  sharePositionOrigin: _sharePositionOrigin(),
+                ),
               );
               if (!mounted) return;
               _showMessage(
@@ -421,17 +446,15 @@ class _DeviceScreenState extends State<DeviceScreen> {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () async {
-            final result =
-                await _controller.sendLatestReportToSlackDetailed();
+            final result = await _controller.sendLatestReportToSlackDetailed();
             if (!mounted) return;
             final ok = result['ok'] == true;
             final message = result['message']?.toString() ??
                 (ok ? 'Slack success' : 'Slack failed');
             _showMessage(
               message,
-              background: ok
-                  ? const Color(0xFF00D4AA)
-                  : const Color(0xFFFF5555),
+              background:
+                  ok ? const Color(0xFF00D4AA) : const Color(0xFFFF5555),
             );
           },
           child: Container(

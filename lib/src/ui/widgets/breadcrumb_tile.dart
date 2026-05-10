@@ -8,13 +8,11 @@ class BreadcrumbTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-       margin: const EdgeInsets.symmetric(
+      margin: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 4,
       ),
-
       padding: const EdgeInsets.all(10),
-
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(8),
@@ -25,7 +23,7 @@ class BreadcrumbTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-  // Type icon
+          // Type icon
           Text(
             _typeIcon,
             style: const TextStyle(fontSize: 14),
@@ -83,11 +81,10 @@ class BreadcrumbTile extends StatelessWidget {
           ),
         ],
       ),
-
     );
   }
 
-   // Color based on event type
+  // Color based on event type
   Color get _typeColor {
     switch (breadcrumb.type) {
       case 'network':

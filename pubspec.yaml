@@ -1,17 +1,17 @@
 name: emitrace
 description: >
-  Flutter in-app bug reporting SDK for QA and developers with logs, network
-  tracing, screenshots, and shareable debug reports.
-version: 1.0.2
+  One-tap Flutter debugging toolkit that captures logs, route transitions,
+  Dio network activity, errors, screenshots, and shareable bug reports.
+version: 1.1.0
 homepage: https://github.com/RITIKKUMAWAT009/emitrace
 repository: https://github.com/RITIKKUMAWAT009/emitrace
 issue_tracker: https://github.com/RITIKKUMAWAT009/emitrace/issues
 topics:
   - flutter
   - debugging
-  - logging
-  - qa
+  - logs
   - dio
+  - qa
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

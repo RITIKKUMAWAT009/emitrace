@@ -46,17 +46,14 @@ class _EmitraceScopeState extends State<EmitraceScope> {
       FlutterError.onError = _previousFlutterErrorHandler;
     }
     if (_previousPlatformErrorHandler != null) {
-      ui.PlatformDispatcher.instance.onError =
-          _previousPlatformErrorHandler;
+      ui.PlatformDispatcher.instance.onError = _previousPlatformErrorHandler;
     }
     super.dispose();
   }
 
   void _installErrorHandlers() {
-    if (!widget.config.enableAutoScreenshotOnError) return;
     _previousFlutterErrorHandler = FlutterError.onError;
-    _previousPlatformErrorHandler =
-        ui.PlatformDispatcher.instance.onError;
+    _previousPlatformErrorHandler = ui.PlatformDispatcher.instance.onError;
 
     FlutterError.onError = (FlutterErrorDetails details) async {
       await _controller.captureErrorAndScreenshot(
@@ -68,8 +65,7 @@ class _EmitraceScopeState extends State<EmitraceScope> {
       _previousFlutterErrorHandler?.call(details);
     };
 
-    ui.PlatformDispatcher.instance.onError =
-        (Object error, StackTrace stack) {
+    ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
       _controller.captureErrorAndScreenshot(
         message: error.toString(),
         exception: error,
@@ -98,9 +94,7 @@ class _EmitraceScopeState extends State<EmitraceScope> {
           key: _captureBoundaryKey,
           child: widget.child,
         ),
-
-        if (widget.config.showOverlay)
-          _EmitraceButton(config: widget.config),
+        if (widget.config.showOverlay) _EmitraceButton(config: widget.config),
       ],
     );
   }
@@ -124,11 +118,9 @@ class _EmitraceButtonState extends State<_EmitraceButton> {
   bool _isSheetOpen = false;
 
   BuildContext? get _hostContext {
-    final navigatorContext =
-        widget.config.navigatorKey?.currentContext;
+    final navigatorContext = widget.config.navigatorKey?.currentContext;
     if (navigatorContext != null) return navigatorContext;
-    return Navigator.maybeOf(context, rootNavigator: true)
-        ?.context;
+    return Navigator.maybeOf(context, rootNavigator: true)?.context;
   }
 
   Future<void> _openPanel() async {
@@ -194,8 +186,7 @@ class _EmitraceButtonState extends State<_EmitraceButton> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6C63FF)
-                              .withValues(alpha: 0.4),
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),

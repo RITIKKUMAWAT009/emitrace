@@ -1,20 +1,16 @@
 # Emitrace Example
 
-This example demonstrates how to integrate Emitrace in a Flutter app.
+This example demonstrates the recommended Emitrace integration flow:
 
-## What this example shows
+- `EmitraceScope` setup with `EmitraceConfig`
+- `EmitraceRouteObserver` setup in `navigatorObservers`
+- Manual APIs: `Emitrace.log`, `Emitrace.event`, `Emitrace.action`, `Emitrace.breadcrumb`
+- Dio integration with `EmitraceDioInterceptor`
+- Error capture + screenshot flow
+- Report generation flow
 
-- Wrapping your app with `EmitraceScope`
-- Configuring `EmitraceConfig` with `navigatorKey`
-- Adding `EmitraceDioInterceptor` to Dio
-- Creating manual log events using `EmitraceController().log(...)`
-
-## Run example
+Run:
 
 ```bash
-cd example
-flutter pub get
 flutter run
 ```
-
-After launch, use the floating `E` button to open the panel and inspect logs.

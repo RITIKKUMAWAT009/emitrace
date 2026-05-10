@@ -1,14 +1,15 @@
-import 'package:emitrace/src/models/breadcrumb.dart';
-import 'package:emitrace/src/core/emitrace_config.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'package:path_provider/path_provider.dart';
+
+import 'package:emitrace/src/core/emitrace_config.dart';
+import 'package:emitrace/src/models/breadcrumb.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 /// Central singleton that stores events and powers reports/screenshots.
 class EmitraceController {
@@ -16,11 +17,11 @@ class EmitraceController {
   EmitraceController._internal();
   factory EmitraceController() => _instance;
 
-  final int maxBreadCrumbs = 50;
   EmitraceConfig? _config;
   GlobalKey? _captureBoundaryKey;
   DateTime? _lastScreenshotAt;
   String? _latestReportPath;
+  String? _currentRoute;
 
   final List<Breadcrumb> _breadCrumbs = [];
   static const MethodChannel _galleryChannel =
@@ -32,6 +33,9 @@ class EmitraceController {
   /// Absolute path of the most recently generated report, if available.
   String? get latestReportPath => _latestReportPath;
 
+  /// Latest route observed by [EmitraceRouteObserver] if configured.
+  String? get currentRoute => _currentRoute;
+
   void configure({
     required EmitraceConfig config,
     required GlobalKey captureBoundaryKey,
@@ -40,19 +44,24 @@ class EmitraceController {
     _captureBoundaryKey = captureBoundaryKey;
   }
 
-  /// Add bread crumb [CORE]
+  int get _maxBreadCrumbs => _config?.maxBreadCrumbs ?? 50;
+
+  /// Add breadcrumb to rolling buffer.
   void addBreadCrumb(Breadcrumb breadCrumb) {
-    if (_breadCrumbs.length >= maxBreadCrumbs) {
+    if (_breadCrumbs.length >= _maxBreadCrumbs) {
       _breadCrumbs.removeAt(0);
     }
     _breadCrumbs.add(breadCrumb);
   }
 
-  ///[HELPERS]
+  void breadcrumb(String message, {Map<String, dynamic> data = const {}}) {
+    log(message, data: data);
+  }
+
   void log(String message, {Map<String, dynamic> data = const {}}) {
     addBreadCrumb(
       Breadcrumb(
-        type: "log",
+        type: 'log',
         message: message,
         timestamp: DateTime.now(),
         data: data,
@@ -60,23 +69,58 @@ class EmitraceController {
     );
   }
 
-  void navigation(String from, String to) {
+  void event(String name, {Map<String, dynamic> data = const {}}) {
     addBreadCrumb(
       Breadcrumb(
-        type: "navigation",
-        message: "$from -> $to",
+        type: 'event',
+        message: name,
         timestamp: DateTime.now(),
+        data: data,
       ),
     );
   }
 
-  void error(String message, {dynamic exception}) {
+  void action(String name, {Map<String, dynamic> data = const {}}) {
     addBreadCrumb(
       Breadcrumb(
-        type: "error",
+        type: 'action',
+        message: name,
+        timestamp: DateTime.now(),
+        data: data,
+      ),
+    );
+  }
+
+  void navigation(
+    String from,
+    String to, {
+    String transition = 'unknown',
+  }) {
+    _currentRoute = to;
+    addBreadCrumb(
+      Breadcrumb(
+        type: 'navigation',
+        message: '$from -> $to',
+        timestamp: DateTime.now(),
+        data: {
+          'previousRoute': from,
+          'currentRoute': to,
+          'transition': transition,
+        },
+      ),
+    );
+  }
+
+  void error(String message, {dynamic exception, StackTrace? stackTrace}) {
+    addBreadCrumb(
+      Breadcrumb(
+        type: 'error',
         message: message,
         timestamp: DateTime.now(),
-        data: exception != null ? {"exception": exception} : {},
+        data: {
+          if (exception != null) 'exception': exception.toString(),
+          if (stackTrace != null) 'stackTrace': stackTrace.toString(),
+        },
       ),
     );
   }
@@ -88,23 +132,23 @@ class EmitraceController {
     required int responseTime,
     Map<String, dynamic> data = const {},
   }) {
-    addBreadCrumb(Breadcrumb(
-      type: 'network',
-      message: '$method $url → $statusCode',
-      timestamp: DateTime.now(),
-      data: {
-        'method': method,
-        'url': url,
-        'statusCode': statusCode,
-        'responseTimeMs': responseTime,
-        ...data,
-      },
-    ));
+    addBreadCrumb(
+      Breadcrumb(
+        type: 'network',
+        message: '$method $url -> $statusCode',
+        timestamp: DateTime.now(),
+        data: {
+          'method': method,
+          'url': url,
+          'statusCode': statusCode,
+          'responseTimeMs': responseTime,
+          ...data,
+        },
+      ),
+    );
   }
 
-  Future<String?> captureScreenshot({
-    String reason = 'manual',
-  }) async {
+  Future<String?> captureScreenshot({String reason = 'manual'}) async {
     final config = _config;
     final boundaryKey = _captureBoundaryKey;
     if (config == null || boundaryKey == null) return null;
@@ -119,17 +163,14 @@ class EmitraceController {
     try {
       await SchedulerBinding.instance.endOfFrame;
       final context = boundaryKey.currentContext;
-      if (context == null) return null;
-      if (!context.mounted) return null;
+      if (context == null || !context.mounted) return null;
       final renderObject = context.findRenderObject();
       if (renderObject is! RenderRepaintBoundary) return null;
 
       final ui.Image image = await renderObject.toImage(
         pixelRatio: config.screenshotPixelRatio.toDouble(),
       );
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
 
       final bytes = byteData.buffer.asUint8List();
@@ -142,14 +183,14 @@ class EmitraceController {
           '${screenshotsDir.path}/emitrace_${reason}_${now.millisecondsSinceEpoch}.png';
       final file = File(path);
       await file.writeAsBytes(bytes, flush: true);
+
       if (config.autoSaveScreenshotToGallery) {
         try {
-          await _galleryChannel.invokeMethod<bool>(
-            'saveToGallery',
-            {'path': path},
-          );
+          await _galleryChannel
+              .invokeMethod<bool>('saveToGallery', {'path': path});
         } catch (_) {}
       }
+
       _lastScreenshotAt = now;
       return path;
     } catch (_) {
@@ -190,6 +231,34 @@ class EmitraceController {
     );
   }
 
+  Map<String, dynamic> reportToJson() {
+    final now = DateTime.now();
+    final summary = <String, int>{};
+    for (final b in _breadCrumbs) {
+      summary[b.type] = (summary[b.type] ?? 0) + 1;
+    }
+
+    final navigationEvents =
+        _breadCrumbs.where((b) => b.type == 'navigation').toList();
+    final actions = _breadCrumbs.where((b) => b.type == 'action').toList();
+    final errors = _breadCrumbs.where((b) => b.type == 'error').toList();
+    final networkLogs = _breadCrumbs.where((b) => b.type == 'network').toList();
+
+    return {
+      'appName': _config?.appName ?? 'Unknown',
+      'generatedAt': now.toIso8601String(),
+      'currentRoute': _currentRoute,
+      'totalEvents': _breadCrumbs.length,
+      'summary': summary,
+      'recentNavigationEvents':
+          navigationEvents.take(15).map((e) => e.toJson()).toList(),
+      'recentActions': actions.take(25).map((e) => e.toJson()).toList(),
+      'errors': errors.map((e) => e.toJson()).toList(),
+      'networkLogs': networkLogs.map((e) => e.toJson()).toList(),
+      'timeline': _breadCrumbs.map((e) => e.toJson()).toList(),
+    };
+  }
+
   Future<String?> generateReport() async {
     final config = _config;
     if (config != null && !config.enableReportGenerator) {
@@ -205,19 +274,24 @@ class EmitraceController {
     final reportPath =
         '${reportsDir.path}/emitrace_report_${now.millisecondsSinceEpoch}.md';
 
-    final summary = <String, int>{};
-    for (final b in _breadCrumbs) {
-      summary[b.type] = (summary[b.type] ?? 0) + 1;
-    }
+    final data = reportToJson();
+    final summary = Map<String, dynamic>.from(data['summary'] as Map);
+    final navEvents =
+        List<Map<String, dynamic>>.from(data['recentNavigationEvents'] as List);
+    final errors = List<Map<String, dynamic>>.from(data['errors'] as List);
+    final networkLogs =
+        List<Map<String, dynamic>>.from(data['networkLogs'] as List);
 
     final buffer = StringBuffer()
       ..writeln('# Emitrace Debug Report')
       ..writeln()
       ..writeln('## Overview')
-      ..writeln('- **App**: ${config?.appName ?? "Unknown"}')
-      ..writeln('- **Generated At**: ${now.toIso8601String()}')
-      ..writeln('- **Total Events**: ${_breadCrumbs.length}')
-      ..writeln();
+      ..writeln('- **App**: ${data['appName']}')
+      ..writeln('- **Generated At**: ${data['generatedAt']}')
+      ..writeln('- **Current Route**: ${data['currentRoute'] ?? 'unknown'}')
+      ..writeln('- **Total Events**: ${data['totalEvents']}')
+      ..writeln()
+      ..writeln('## Event Summary');
 
     summary.forEach((key, value) {
       buffer.writeln('- **$key**: $value');
@@ -225,15 +299,92 @@ class EmitraceController {
 
     buffer
       ..writeln()
-      ..writeln('## Timeline')
+      ..writeln('## Recent Navigation')
+      ..writeln();
+
+    if (navEvents.isEmpty) {
+      buffer.writeln('- No navigation events recorded.');
+    } else {
+      for (final event in navEvents.reversed.take(10)) {
+        final eventData =
+            Map<String, dynamic>.from(event['data'] as Map? ?? {});
+        buffer.writeln(
+          '- ${event['timeStamp']}: ${eventData['previousRoute'] ?? 'unknown'} -> '
+          '${eventData['currentRoute'] ?? 'unknown'} '
+          '(${eventData['transition'] ?? 'unknown'})',
+        );
+      }
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('## Recent Actions & Breadcrumbs')
+      ..writeln();
+
+    final recentBehavior = _breadCrumbs
+        .where(
+            (b) => b.type == 'action' || b.type == 'event' || b.type == 'log')
+        .toList()
+        .reversed
+        .take(20)
+        .toList();
+
+    if (recentBehavior.isEmpty) {
+      buffer.writeln('- No actions/events recorded.');
+    } else {
+      for (final item in recentBehavior.reversed) {
+        buffer.writeln(
+            '- ${item.timestamp.toIso8601String()} [${item.type}] ${item.message}');
+      }
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('## Errors')
+      ..writeln();
+
+    if (errors.isEmpty) {
+      buffer.writeln('- No errors recorded.');
+    } else {
+      for (final errorItem in errors.reversed.take(20)) {
+        final errorData =
+            Map<String, dynamic>.from(errorItem['data'] as Map? ?? {});
+        buffer
+            .writeln('- **${errorItem['timeStamp']}** ${errorItem['message']}');
+        if ((errorData['screenshotPath']?.toString().isNotEmpty ?? false)) {
+          buffer.writeln('  - screenshot: `${errorData['screenshotPath']}`');
+        }
+      }
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('## Network Logs')
+      ..writeln();
+
+    if (networkLogs.isEmpty) {
+      buffer.writeln('- No network logs recorded.');
+    } else {
+      for (final networkItem in networkLogs.reversed.take(30)) {
+        final networkData =
+            Map<String, dynamic>.from(networkItem['data'] as Map? ?? {});
+        buffer.writeln(
+          '- **${networkItem['timeStamp']}** ${networkData['method'] ?? ''} '
+          '${networkData['url'] ?? ''} -> ${networkData['statusCode'] ?? ''} '
+          '(${networkData['responseTimeMs'] ?? 0}ms)',
+        );
+      }
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('## Full Timeline')
       ..writeln();
 
     for (int i = 0; i < _breadCrumbs.length; i++) {
       final b = _breadCrumbs[i];
       final screenshotPath = b.data['screenshotPath']?.toString();
-      buffer.writeln(
-        '### ${i + 1}. ${b.type.toUpperCase()}',
-      );
+      buffer.writeln('### ${i + 1}. ${b.type.toUpperCase()}');
       buffer.writeln('- **Time**: ${b.timestamp.toIso8601String()}');
       buffer.writeln('- **Message**: ${b.message}');
       if (screenshotPath != null && screenshotPath.isNotEmpty) {
@@ -260,6 +411,7 @@ class EmitraceController {
         data: {
           'reportPath': reportPath,
           'reportFileName': _fileName(reportPath),
+          'report': data,
         },
       ),
     );
@@ -296,16 +448,14 @@ class EmitraceController {
       'text': 'Emitrace Report\n'
           'App: ${config.appName}\n'
           'Events: ${_breadCrumbs.length}\n'
+          'Current route: ${_currentRoute ?? 'unknown'}\n'
           'Summary: $summaryText\n'
           'Local report path: $reportPath\n'
           'Recent errors:\n'
           '${_latestErrorSummary()}',
     });
 
-    final response = await _postJsonWithRedirects(
-      Uri.parse(webhook),
-      payload,
-    );
+    final response = await _postJsonWithRedirects(Uri.parse(webhook), payload);
 
     final ok = response.statusCode >= 200 && response.statusCode < 300;
     addBreadCrumb(
@@ -334,10 +484,8 @@ class EmitraceController {
       };
     }
     try {
-      final result = await _galleryChannel.invokeMethod<bool>(
-        'saveToGallery',
-        {'path': path},
-      );
+      final result = await _galleryChannel
+          .invokeMethod<bool>('saveToGallery', {'path': path});
       final ok = result == true;
       if (ok) {
         return {
