@@ -1,50 +1,43 @@
 # Emitrace
 
-One-tap Flutter debugging for QA and developers.  
-Capture logs, network calls, runtime errors, screenshots, and export clean reports from inside your app.
+Emitrace helps Flutter developers understand what happened before bugs occur.
 
-## Why Emitrace
-- Fast in-app debugging without leaving the device.
-- Better bug reports with event timeline + metadata.
-- Team-ready summaries via Slack webhook.
+One-tap in-app debugging for QA and developers: logs, network tracing, actions, route transitions, screenshots, and shareable reports.
 
 ## Features
-- Floating `E` launcher overlay.
-- Logs with filters: `all`, `network`, `error`, `navigation`, `log`.
-- Tap any log to inspect full metadata/body.
-- Dio network tracing using `EmitraceDioInterceptor`.
-- Auto screenshot capture on framework/platform errors.
-- Optional guidance for saving screenshots to gallery via host-app specific integration.
-- Markdown report generation.
-- Share/export report from device.
-- Send report summary to Slack webhook.
 
-## Installation
+- Floating `E` launcher overlay inside your app
+- Filterable timeline: `all`, `network`, `error`, `navigation`, `action`, `event`, `log`
+- Route tracking with previous route, current route, timestamp, and transition type
+- Dio tracing with request/response/error capture (including 4xx/5xx paths)
+- Manual APIs: `log`, `event`, `action`, `breadcrumb`, `error`
+- Auto screenshot capture on framework/platform/manual errors
+- Markdown report generation with navigation, actions, errors, network, and metadata
+- Report preview/copy/share from panel
+- Optional Slack webhook summary posting
+
+## 2-Minute Quickstart
+
 ```yaml
 dependencies:
-  emitrace: ^1.0.2
+  emitrace: ^1.1.0
 ```
 
-## Quick Start
 ```dart
 import 'package:emitrace/emitrace.dart';
 import 'package:flutter/material.dart';
 
-final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+final navKey = GlobalKey<NavigatorState>();
 
 void main() {
   runApp(
     EmitraceScope(
       config: EmitraceConfig(
         appName: 'My App',
-        navigatorKey: appNavigatorKey,
-        showOverlay: true,
-        enableAutoScreenshotOnError: true,
-        enableReportGenerator: true,
-        enableSlackIntegration: false,
+        navigatorKey: navKey,
       ),
       child: MaterialApp(
-        navigatorKey: appNavigatorKey,
+        navigatorKey: navKey,
         home: const HomePage(),
       ),
     ),
@@ -52,63 +45,81 @@ void main() {
 }
 ```
 
-## Network Tracking (Dio)
+Open the floating `E` button, reproduce the issue, inspect timeline/network/errors, then generate/share report.
+
+## Route Tracking Setup
+
+```dart
+final routeObserver = EmitraceRouteObserver();
+
+MaterialApp(
+  navigatorObservers: [routeObserver],
+)
+```
+
+Works with standard Navigator usage and does not force a specific routing package.
+
+## Manual API Examples
+
+```dart
+Emitrace.log('User opened checkout', data: {'cartItems': 3});
+Emitrace.event('checkout_started', data: {'flow': 'guest'});
+Emitrace.action('tap_pay_now', data: {'buttonId': 'pay_now'});
+Emitrace.breadcrumb('Reached payment screen');
+
+try {
+  // risky call
+} catch (e, st) {
+  await Emitrace.error(e, st, data: {'feature': 'payment'});
+}
+
+await Emitrace.captureScreenshot(reason: 'before_submit');
+await Emitrace.captureReport();
+```
+
+## Dio Interceptor Setup
+
 ```dart
 final dio = Dio();
 dio.interceptors.add(EmitraceDioInterceptor());
 ```
 
-## Configuration
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | `bool` | `true` | Enable/disable Emitrace. |
-| `appName` | `String` | `"My App"` | App label in reports/messages. |
-| `showOverlay` | `bool` | `true` | Show floating `E` launcher. |
-| `navigatorKey` | `GlobalKey<NavigatorState>?` | `null` | Required for reliable panel presentation. |
-| `maxBreadCrumbs` | `int` | `50` | Max stored events (rolling buffer). |
-| `slackWebHookUrl` | `String?` | `null` | Incoming webhook URL for Slack summary posting. |
-| `enableAutoScreenshotOnError` | `bool` | `true` | Capture screenshot on runtime errors. |
-| `enableReportGenerator` | `bool` | `true` | Enable report generation. |
-| `enableSlackIntegration` | `bool` | `false` | Enable Slack send action. |
-| `screenshotPixelRatio` | `int` | `2` | Screenshot resolution scale. |
-| `autoSaveScreenshotToGallery` | `bool` | `false` | Reserved for host app integrations that handle gallery save. |
+## Report Generation Flow
+
+1. Reproduce a bug.
+2. Capture relevant `Emitrace.action`/`Emitrace.event` calls around user interactions.
+3. Open Emitrace panel and inspect logs/network/errors.
+4. Tap **Generate Report**.
+5. Preview, copy, or share from device tab.
+
+## Slack Webhook Setup
+
+```dart
+EmitraceConfig(
+  enableSlackIntegration: true,
+  slackWebHookUrl: 'https://hooks.slack.com/services/xxx/yyy/zzz',
+)
+```
+
+Notes:
+- Incoming webhook posts a summary text message.
+- Local file paths in report are device-local references.
 
 ## Platform Notes
-- iOS: add photo library usage keys if your host app implements gallery save.
-- Slack webhook can post summary text; local file paths are not shareable outside device.
-- Slack file upload via bot token/API is planned for a future version.
-- Some iOS/macOS dependencies currently resolve through CocoaPods because upstream plugins may not fully support Swift Package Manager yet.
-- If screenshot save fails, add:
-  - `NSPhotoLibraryUsageDescription`
-  - `NSPhotoLibraryAddUsageDescription`
-  in your app `Info.plist`.
-- On Android, ensure media/gallery permissions are present in `AndroidManifest.xml` if gallery save is implemented by host app.
 
-### Native Gallery Save Contract (No External Package)
-- Emitrace uses `MethodChannel('emitrace/gallery')`.
-- Implement method `saveToGallery` on host app native side (Android/iOS).
-- Arguments:
-  - `path` (`String`): absolute screenshot file path
-- Return:
-  - `true` on success
-  - `false` on failure
-
-## Dependency Updates
-- This repository includes Dependabot config at `.github/dependabot.yml` for weekly dependency update PRs.
-- Keep version constraints explicit (do not leave them blank) and review PRs before merging.
-
-## QA Flow
-1. Reproduce issue.
-2. Open `E` panel.
-3. Inspect logs/network/errors.
-4. Tap error log for metadata + screenshot.
-5. Generate report and share/copy it using host app flow.
-6. Send summary to Slack.
+- `navigatorKey` is recommended for reliable panel presentation.
+- iOS gallery save requires photo library usage descriptions when host app implements save.
+- Android gallery save requires proper media/storage permissions in host app.
+- Host-app gallery save contract uses `MethodChannel('emitrace/gallery')` with `saveToGallery`.
 
 ## Roadmap
-- Slack file upload (actual report attachment).
-- Hosted report URLs.
-- Rich HTML report export.
+
+See [ROADMAP.md](ROADMAP.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
+
 MIT License. See [LICENSE](LICENSE).

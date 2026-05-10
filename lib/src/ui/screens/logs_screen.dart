@@ -25,6 +25,8 @@ class _LogsScreenState extends State<LogsScreen> {
     {'label': '🌐 Network', 'value': 'network'},
     {'label': '❌ Errors', 'value': 'error'},
     {'label': '🧭 Nav', 'value': 'navigation'},
+    {'label': '⚡ Actions', 'value': 'action'},
+    {'label': '🎯 Events', 'value': 'event'},
     {'label': '📝 Logs', 'value': 'log'},
   ];
 

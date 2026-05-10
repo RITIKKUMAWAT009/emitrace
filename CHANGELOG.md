@@ -1,3 +1,32 @@
+## 1.1.0
+
+Focused DX and report-quality upgrade without breaking existing APIs.
+
+### Added
+- Added `EmitraceRouteObserver` for easy route transition tracking (`push/pop/replace/remove`) with previous and current route context.
+- Added beginner-friendly static API:
+  - `Emitrace.log(...)`
+  - `Emitrace.event(...)`
+  - `Emitrace.action(...)`
+  - `Emitrace.breadcrumb(...)`
+  - `Emitrace.error(...)`
+  - `Emitrace.captureReport()`
+  - `Emitrace.captureScreenshot()`
+- Added action/event timeline support in logs and reports.
+- Added JSON-serializable report payload via `EmitraceController.reportToJson()`.
+- Added docs: `ROADMAP.md`, `CONTRIBUTING.md`, and GitHub issue templates.
+
+### Changed
+- Improved markdown report format with app name, timestamp, current route, recent navigation, recent actions/events/logs, errors, network logs, screenshots, and metadata.
+- Device tab now includes explicit “Clear Logs & History”.
+- Example app now demonstrates full Emitrace flow: scope setup, route observer, manual APIs, dio success/failure, forced error, screenshot capture, and report generation.
+- Pubspec metadata refined for better pub.dev discoverability.
+
+### Fixed
+- Error handlers now install independently from auto-screenshot toggle.
+- Dio error path now records failed calls into `network` timeline as well.
+- Request timing in Dio interceptor now handles concurrent same-path requests safely.
+
 ## 1.0.2
 
 Improves pub.dev package quality and release readiness.
