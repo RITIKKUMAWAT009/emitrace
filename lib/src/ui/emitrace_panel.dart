@@ -41,7 +41,6 @@ class _EmitracePanelState extends State<EmitracePanel>
       ),
       child: Column(
         children: [
-          // Handle bar
           Container(
             margin: const EdgeInsets.only(top: 8),
             width: 40,
@@ -51,13 +50,10 @@ class _EmitracePanelState extends State<EmitracePanel>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
               children: [
-                // Logo
                 Container(
                   width: 28,
                   height: 28,
@@ -76,9 +72,7 @@ class _EmitracePanelState extends State<EmitracePanel>
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 const Text(
                   'Emitrace',
                   style: TextStyle(
@@ -87,10 +81,7 @@ class _EmitracePanelState extends State<EmitracePanel>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const Spacer(),
-
-                // Close button
                 GestureDetector(
                   onTap: () {
                     if (widget.onClose != null) {
@@ -115,10 +106,7 @@ class _EmitracePanelState extends State<EmitracePanel>
               ],
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Tab bar
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
@@ -146,10 +134,7 @@ class _EmitracePanelState extends State<EmitracePanel>
               ],
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          // Tab content
+          const SizedBox(height: 10),
           Expanded(
             child: TabBarView(
               controller: _tabController,

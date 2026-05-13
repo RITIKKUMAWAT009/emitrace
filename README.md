@@ -2,25 +2,33 @@
 
 Emitrace helps Flutter developers understand what happened before bugs occur.
 
-One-tap in-app debugging for QA and developers: logs, network tracing, actions, route transitions, screenshots, and shareable reports.
+One-tap in-app debugging for QA and developers: logs, timeline search, network tracing, actions/events, route transitions, screenshots, and shareable reports.
+
+No backend is required.
 
 ## Features
 
 - Floating `E` launcher overlay inside your app
-- Filterable timeline: `all`, `network`, `error`, `navigation`, `action`, `event`, `log`
+- Familiar in-app panel tabs: `Logs`, `Network`, `Device`
+- Timeline UI with grouped cards, type badges, timestamps, and expandable details
+- Search + filters: `all`, `log`, `event`, `action`, `navigation`, `network`, `error`
 - Route tracking with previous route, current route, timestamp, and transition type
 - Dio tracing with request/response/error capture (including 4xx/5xx paths)
 - Manual APIs: `log`, `event`, `action`, `breadcrumb`, `error`
 - Auto screenshot capture on framework/platform/manual errors
-- Markdown report generation with navigation, actions, errors, network, and metadata
+- Crash context summary (latest route, previous route, last 3 actions/events, last failed network, screenshot path)
+- Markdown report generation with timeline, crash summary, errors, network, screenshots, and metadata
+- Copy Debug Bundle markdown for teammate handoff
+- GitHub issue markdown generation via `EmitraceController.generateGitHubIssueMarkdown()`
 - Report preview/copy/share from panel
 - Optional Slack webhook summary posting
+- Optional Discord webhook summary posting
 
 ## 2-Minute Quickstart
 
 ```yaml
 dependencies:
-  emitrace: ^1.1.0
+  emitrace: ^1.2.0
 ```
 
 ```dart
@@ -45,7 +53,7 @@ void main() {
 }
 ```
 
-Open the floating `E` button, reproduce the issue, inspect timeline/network/errors, then generate/share report.
+Open the floating `E` button, inspect logs/network/device context, then generate/copy/share report artifacts.
 
 ## Route Tracking Setup
 
@@ -56,8 +64,6 @@ MaterialApp(
   navigatorObservers: [routeObserver],
 )
 ```
-
-Works with standard Navigator usage and does not force a specific routing package.
 
 ## Manual API Examples
 
@@ -77,6 +83,32 @@ await Emitrace.captureScreenshot(reason: 'before_submit');
 await Emitrace.captureReport();
 ```
 
+## Timeline Search and Filters
+
+- Use the Logs tab search box to match message/route/url/method/metadata text.
+- Use filters to narrow timeline by type.
+- Tap cards to expand details inline or open full detail view.
+
+## Copy Debug Bundle
+
+Use Device tab actions -> `Copy Debug Bundle` to copy a markdown bundle containing:
+
+- app + timestamp overview
+- route timeline
+- recent actions/events
+- recent errors
+- network failures
+- screenshot references
+- device/app metadata
+
+## GitHub Issue Export
+
+```dart
+final markdown = EmitraceController().generateGitHubIssueMarkdown();
+```
+
+Or Device tab actions -> `Copy GitHub Issue Markdown`.
+
 ## Dio Interceptor Setup
 
 ```dart
@@ -84,25 +116,19 @@ final dio = Dio();
 dio.interceptors.add(EmitraceDioInterceptor());
 ```
 
-## Report Generation Flow
-
-1. Reproduce a bug.
-2. Capture relevant `Emitrace.action`/`Emitrace.event` calls around user interactions.
-3. Open Emitrace panel and inspect logs/network/errors.
-4. Tap **Generate Report**.
-5. Preview, copy, or share from device tab.
-
-## Slack Webhook Setup
+## Slack and Discord Webhooks
 
 ```dart
 EmitraceConfig(
   enableSlackIntegration: true,
   slackWebHookUrl: 'https://hooks.slack.com/services/xxx/yyy/zzz',
+  enableDiscordIntegration: true,
+  discordWebhookUrl: 'https://discord.com/api/webhooks/xxx/yyy',
 )
 ```
 
 Notes:
-- Incoming webhook posts a summary text message.
+- Slack and Discord sends are optional and independent.
 - Local file paths in report are device-local references.
 
 ## Platform Notes

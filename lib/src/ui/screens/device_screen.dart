@@ -1,9 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:emitrace/src/core/emitrace_controller.dart';
 import 'package:share_plus/share_plus.dart';
-import 'dart:io';
 
 class DeviceScreen extends StatefulWidget {
   const DeviceScreen({super.key});
@@ -33,10 +34,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
           child: Material(
             color: Colors.transparent,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: background,
                 borderRadius: BorderRadius.circular(10),
@@ -68,107 +66,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
     });
   }
 
-  Future<void> _openLatestReportViewer() async {
-    final path =
-        _controller.latestReportPath ?? await _controller.generateReport();
-    if (!mounted) return;
-    if (path == null) {
-      _showMessage(
-        'Report generation is disabled',
-        background: const Color(0xFFFF5555),
-      );
-      return;
-    }
-    final content = await _controller.loadLatestReportContent();
-    if (!mounted) return;
-    if (content == null || content.isEmpty) {
-      _showMessage(
-        'Could not load report file',
-        background: const Color(0xFFFF5555),
-      );
-      return;
-    }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0A0A0F),
-      builder: (sheetContext) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.of(sheetContext).size.height * 0.85,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Latest Report',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Copy Report',
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: content));
-                        if (!mounted) return;
-                        _showMessage(
-                          'Report content copied',
-                          background: const Color(0xFF00D4AA),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.copy_rounded,
-                        color: Colors.white70,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  path,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF11111B),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        content,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -186,7 +83,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   Future<void> _loadInfo() async {
     final packageInfo = await PackageInfo.fromPlatform();
-    Map<String, String> info = {
+    final info = <String, String>{
       'App Name': packageInfo.appName,
       'Version': packageInfo.version,
       'Build Number': packageInfo.buildNumber,
@@ -194,32 +91,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
     };
 
     try {
-      if (Platform.isAndroid) {
-        info.addAll({
-          'Platform': 'Android',
-          'OS Version': Platform.operatingSystemVersion,
-          'Processors': Platform.numberOfProcessors.toString(),
-          'Locale': Platform.localeName,
-          'Hostname': Platform.localHostname,
-        });
-      } else if (Platform.isIOS) {
-        info.addAll({
-          'Platform': 'iOS',
-          'OS Version': Platform.operatingSystemVersion,
-          'Processors': Platform.numberOfProcessors.toString(),
-          'Locale': Platform.localeName,
-          'Hostname': Platform.localHostname,
-        });
-      } else {
-        info.addAll({
-          'Platform': Platform.operatingSystem,
-          'OS Version': Platform.operatingSystemVersion,
-          'Processors': Platform.numberOfProcessors.toString(),
-          'Locale': Platform.localeName,
-          'Hostname': Platform.localHostname,
-        });
-      }
-    } catch (e) {
+      info.addAll({
+        'Platform': Platform.operatingSystem,
+        'OS Version': Platform.operatingSystemVersion,
+        'Processors': Platform.numberOfProcessors.toString(),
+        'Locale': Platform.localeName,
+        'Hostname': Platform.localHostname,
+      });
+    } catch (_) {
       info['Platform'] = 'Web/Desktop';
     }
 
@@ -231,45 +110,88 @@ class _DeviceScreenState extends State<DeviceScreen> {
     }
   }
 
+  Future<void> _copyDebugBundle() async {
+    final markdown = _controller.generateDebugBundleMarkdown(
+      deviceInfo: _deviceInfo,
+    );
+    await Clipboard.setData(ClipboardData(text: markdown));
+    if (!mounted) return;
+    _showMessage(
+      'Debug bundle copied',
+      background: const Color(0xFF00D4AA),
+    );
+  }
+
+  Future<void> _copyGitHubIssue() async {
+    final markdown = _controller.generateGitHubIssueMarkdown(
+      deviceInfo: _deviceInfo,
+    );
+    await Clipboard.setData(ClipboardData(text: markdown));
+    if (!mounted) return;
+    _showMessage(
+      'GitHub issue markdown copied',
+      background: const Color(0xFF00D4AA),
+    );
+  }
+
+  Widget _actionCard({
+    required String title,
+    required Color border,
+    required Color text,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: border.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: border.withValues(alpha: 0.45)),
+        ),
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: text,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF6C63FF),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
       );
     }
 
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        // App info section
-        _SectionHeader(title: '📦 App Info'),
+        const _SectionHeader(title: '📦 App Info'),
         ..._deviceInfo.entries
             .where((e) => ['App Name', 'Version', 'Build Number', 'Package']
                 .contains(e.key))
-            .map((e) => _InfoRow(
-                  label: e.key,
-                  value: e.value,
-                )),
-
-        const SizedBox(height: 16),
-
-        // Device info section
-        _SectionHeader(title: '📱 Device Info'),
+            .map((e) => _InfoRow(label: e.key, value: e.value)),
+        const SizedBox(height: 14),
+        const _SectionHeader(title: '📱 Device Info'),
         ..._deviceInfo.entries
             .where((e) => !['App Name', 'Version', 'Build Number', 'Package']
                 .contains(e.key))
-            .map((e) => _InfoRow(
-                  label: e.key,
-                  value: e.value,
-                )),
-
-        const SizedBox(height: 16),
-
-        // Copy all button
-        GestureDetector(
+            .map((e) => _InfoRow(label: e.key, value: e.value)),
+        const SizedBox(height: 14),
+        const _SectionHeader(title: '🧰 Actions'),
+        _actionCard(
+          title: '📋 Copy All Device Info',
+          border: const Color(0xFF6C63FF),
+          text: const Color(0xFF8C85FF),
           onTap: () {
             final text = _deviceInfo.entries
                 .map((e) => '${e.key}: ${e.value}')
@@ -277,30 +199,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
             Clipboard.setData(ClipboardData(text: text));
             _showMessage('Device info copied successfully');
           },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                '📋 Copy All Device Info',
-                style: TextStyle(
-                  color: Color(0xFF6C63FF),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
         ),
         const SizedBox(height: 10),
-        GestureDetector(
+        _actionCard(
+          title: 'Generate Report',
+          border: const Color(0xFF00D4AA),
+          text: const Color(0xFF00D4AA),
           onTap: () async {
             final reportPath = await _controller.generateReport();
             if (!mounted) return;
@@ -313,84 +217,26 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   : const Color(0xFF00D4AA),
             );
           },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00D4AA).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFF00D4AA).withValues(alpha: 0.3),
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                'Generate Report',
-                style: TextStyle(
-                  color: Color(0xFF00D4AA),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
         ),
         const SizedBox(height: 10),
-        GestureDetector(
-          onTap: () {
-            _controller.clear();
-            _showMessage(
-              'Logs and action history cleared',
-              background: const Color(0xFFFF9F43),
-            );
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF9F43).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFFFF9F43).withValues(alpha: 0.4),
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                'Clear Logs & History',
-                style: TextStyle(
-                  color: Color(0xFFFFC56E),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
+        _actionCard(
+          title: 'Copy Debug Bundle',
+          border: const Color(0xFF00D4AA),
+          text: const Color(0xFF00D4AA),
+          onTap: _copyDebugBundle,
         ),
         const SizedBox(height: 10),
-        GestureDetector(
-          onTap: _openLatestReportViewer,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A2740),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white24),
-            ),
-            child: const Center(
-              child: Text(
-                'View Latest Report',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
+        _actionCard(
+          title: 'Copy GitHub Issue Markdown',
+          border: const Color(0xFF6AA2FF),
+          text: const Color(0xFF8EB7FF),
+          onTap: _copyGitHubIssue,
         ),
         const SizedBox(height: 10),
-        GestureDetector(
+        _actionCard(
+          title: 'Open/Share Latest Report',
+          border: const Color(0xFF2A2A52),
+          text: Colors.white,
           onTap: () async {
             final path = _controller.latestReportPath ??
                 await _controller.generateReport();
@@ -415,7 +261,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 'Report share sheet opened',
                 background: const Color(0xFF00D4AA),
               );
-            } catch (e) {
+            } catch (_) {
               if (!mounted) return;
               _showMessage(
                 'Report share failed',
@@ -423,61 +269,52 @@ class _DeviceScreenState extends State<DeviceScreen> {
               );
             }
           },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2A2A52),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white24),
-            ),
-            child: const Center(
-              child: Text(
-                'Open/Share Latest Report',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
         ),
         const SizedBox(height: 10),
-        GestureDetector(
+        _actionCard(
+          title: 'Send Report To Slack',
+          border: const Color(0xFF4A154B),
+          text: const Color(0xFFEBD4EC),
           onTap: () async {
             final result = await _controller.sendLatestReportToSlackDetailed();
             if (!mounted) return;
             final ok = result['ok'] == true;
-            final message = result['message']?.toString() ??
-                (ok ? 'Slack success' : 'Slack failed');
             _showMessage(
-              message,
+              result['message']?.toString() ?? 'Slack send failed',
               background:
                   ok ? const Color(0xFF00D4AA) : const Color(0xFFFF5555),
             );
           },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4A154B).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFF4A154B).withValues(alpha: 0.5),
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                'Send Report To Slack',
-                style: TextStyle(
-                  color: Color(0xFFEBD4EC),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
+        ),
+        const SizedBox(height: 10),
+        _actionCard(
+          title: 'Send Report To Discord',
+          border: const Color(0xFF5865F2),
+          text: const Color(0xFFA5AEFF),
+          onTap: () async {
+            final result =
+                await _controller.sendLatestReportToDiscordDetailed();
+            if (!mounted) return;
+            final ok = result['ok'] == true;
+            _showMessage(
+              result['message']?.toString() ?? 'Discord send failed',
+              background:
+                  ok ? const Color(0xFF00D4AA) : const Color(0xFFFF5555),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        _actionCard(
+          title: 'Clear Logs & History',
+          border: const Color(0xFFFF9F43),
+          text: const Color(0xFFFFC56E),
+          onTap: () {
+            _controller.clear();
+            _showMessage(
+              'Logs and action history cleared',
+              background: const Color(0xFFFF9F43),
+            );
+          },
         ),
       ],
     );
@@ -498,7 +335,7 @@ class _SectionHeader extends StatelessWidget {
           color: Colors.white54,
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          letterSpacing: 1.0,
         ),
       ),
     );
@@ -514,10 +351,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(8),
@@ -527,17 +361,17 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontFamily: 'monospace',
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

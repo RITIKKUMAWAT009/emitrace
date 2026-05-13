@@ -1,3 +1,36 @@
+## 1.2.0
+
+### UX
+- Kept the familiar bottom-sheet panel structure with `Logs`, `Network`, and `Device` tabs.
+- Cleaned up spacing and action grouping in Device tab to reduce visual clutter without changing workflow.
+
+### Added
+- Timeline UX upgrade with grouped cards, clearer type badges, timestamps, and inline expandable details.
+- Search in timeline with filters for `all`, `log`, `event`, `action`, `navigation`, `network`, and `error`.
+- Crash context summary generation including latest route, previous route, last 3 actions/events, last failed network request, and screenshot path when available.
+- New report builders:
+  - `EmitraceController.generateGitHubIssueMarkdown()`
+  - debug bundle markdown generation for copy/share workflows.
+- Optional Discord webhook support in `EmitraceConfig`:
+  - `enableDiscordIntegration`
+  - `discordWebhookUrl`
+- Device tab actions include report/debug operations with simple section grouping:
+  - Generate Report
+  - Copy Debug Bundle
+  - Copy GitHub Issue Markdown
+  - Send Report To Slack/Discord
+  - Clear Logs & History
+
+### Changed
+- `reportToJson()` now includes additive `crashContextSummary` payload.
+- Markdown report output now includes crash context summary and team-oriented debug sections.
+- Example app updated to demonstrate new timeline/report workflow and Discord config disabled by default.
+- Documentation refresh across README, ROADMAP, and example docs for v1.2.0 workflows.
+
+### Compatibility
+- Existing v1.1.x public APIs remain compatible.
+- Slack integration behavior remains unchanged.
+
 ## 1.1.1
 
 ### Fixed
