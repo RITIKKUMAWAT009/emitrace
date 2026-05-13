@@ -23,7 +23,9 @@ class ExampleApp extends StatelessWidget {
         enableAutoScreenshotOnError: true,
         enableReportGenerator: true,
         enableSlackIntegration: false,
+        enableDiscordIntegration: false,
         slackWebHookUrl: '',
+        discordWebhookUrl: '',
       ),
       child: MaterialApp(
         navigatorKey: _navigatorKey,
@@ -106,6 +108,10 @@ class ExampleHomePage extends StatelessWidget {
               await Emitrace.captureReport();
             },
             child: const Text('Generate Report'),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Open the Emitrace panel -> Logs tab for search + filters and Device tab for Debug Bundle, GitHub issue markdown, Crash summary, and Discord send action.',
           ),
           const SizedBox(height: 10),
           ElevatedButton(

@@ -8,6 +8,9 @@ class EmitraceConfig {
   /// Slack incoming webhook URL used when sending report summaries.
   final String? slackWebHookUrl;
 
+  /// Discord incoming webhook URL used when sending report summaries.
+  final String? discordWebhookUrl;
+
   /// App display name shown in generated reports.
   final String appName;
 
@@ -29,6 +32,9 @@ class EmitraceConfig {
   /// Enables Slack send action in the device tab.
   final bool enableSlackIntegration;
 
+  /// Enables Discord send action in the device tab.
+  final bool enableDiscordIntegration;
+
   /// Pixel ratio used when rendering screenshots.
   final int screenshotPixelRatio;
 
@@ -42,10 +48,12 @@ class EmitraceConfig {
     this.showOverlay = true,
     this.maxBreadCrumbs = 50,
     this.slackWebHookUrl,
+    this.discordWebhookUrl,
     this.navigatorKey,
     this.enableAutoScreenshotOnError = true,
     this.enableReportGenerator = true,
     this.enableSlackIntegration = false,
+    this.enableDiscordIntegration = false,
     this.screenshotPixelRatio = 2,
     this.autoSaveScreenshotToGallery = false,
   });
